@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Birla Marble & Sanitary Store</title>
+
+<style>
+body { margin:0; overflow:hidden; font-family:Arial; }
+
+#overlay{
+ position:absolute; width:100%; height:100%;
+ background:black; color:white;
+ display:flex; flex-direction:column;
+ justify-content:center; align-items:center;
+ font-size:30px; cursor:pointer; z-index:10;
+}
+
+#overlay small{
+ font-size:16px;
+ margin-top:10px;
+}
+
+#panel{
+ position:absolute; right:-350px; top:0;
+ width:350px; height:100%;
+ background:#111; color:white;
+ padding:20px; transition:0.5s;
+}
+
+#panel img{
+ width:100%; border-radius:10px;
+ margin-bottom:10px;
+}
+
+#topBar{
+ position:absolute; top:10px; left:50%;
+ transform:translateX(-50%);
+ background:rgba(0,0,0,0.7);
+ padding:10px 20px;
+ color:white;
+ border-radius:10px;
+ font-size:20px;
+}
+
+#designBar{
+ position:absolute; bottom:10px; left:50%;
+ transform:translateX(-50%);
+ background:rgba(0,0,0,0.7);
+ padding:10px; border-radius:10px;
+}
+
+button{
+ margin:5px; padding:10px;
+ border:none; cursor:pointer;
+}
+
+#whatsapp{
+ position:absolute;
+ bottom:20px;
+ right:20px;
+ background:#25D366;
+ color:white;
+ padding:15px;
+ border-radius:50%;
+ font-size:20px;
+ cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="overlay">
+  Birla Marble & Sanitary Store
+  <small>Click to Enter Showroom</small>
+</div>
+
+<div id="topBar">Birla Marble & Sanitary Store</div>
+
+<div id="panel">
+<h2 id="name"></h2>
+<img id="img">
+<p id="price"></p>
+<p id="size"></p>
+<p id="finish"></p>
+</div>
+
+<div id="designBar">
+<button onclick="loadTiles()">Load Tiles</button>
+<button onclick="focusTile(0)">1</button>
+<button onclick="focusTile(1)">2</button>
+<button onclick="focusTile(2)">3</button>
+<button onclick="focusTile(3)">4</button>
+</div>
+
+<div id="whatsapp" onclick="orderNow()">🟢</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0xeeeeee);
+
+let camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+let renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// LIGHT
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+let light = new THREE.PointLight(0xffffff,1.2);
+light.position.set(5,5,5);
+scene.add(light);
+
+// FLOOR
+let floorTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg');
+let floor = new THREE.Mesh(
+ new THREE.PlaneGeometry(30,30),
+ new THREE.MeshStandardMaterial({map:floorTex})
+);
+floor.rotation.x = -Math.PI/2;
+scene.add(floor);
+
+// WALLS
+function wall(x,z,rot){
+ let w = new THREE.Mesh(
+  new THREE.PlaneGeometry(30,10),
+  new THREE.MeshStandardMaterial({color:0xffffff})
+ );
+ w.position.set(x,5,z);
+ w.rotation.y = rot;
+ scene.add(w);
+}
+wall(0,-15,0);
+wall(-15,0,Math.PI/2);
+wall(15,0,-Math.PI/2);
+
+// TILE DATA
+let tiles=[];
+let currentTile=null;
+
+let data=[
+ {name:"Golden Marble", price:"₹95/sqft", size:"800x800mm", finish:"Glossy", img:"tiles/tile1.jpg"},
+ {name:"Blue Marble", price:"₹110/sqft", size:"800x800mm", finish:"High Gloss", img:"tiles/tile2.jpg"},
+ {name:"Premium Gold", price:"₹130/sqft", size:"1200x1200mm", finish:"Mirror", img:"tiles/tile3.jpg"},
+ {name:"Luxury Tile", price:"₹150/sqft", size:"1200x1800mm", finish:"Ultra Gloss", img:"tiles/tile4.jpg"}
+];
+
+// LOAD TILES
+function loadTiles(){
+ tiles.forEach(t=>scene.remove(t));
+ tiles=[];
+
+ data.forEach((d,i)=>{
+  let tex=new THREE.TextureLoader().load(d.img);
+  let tile=new THREE.Mesh(
+   new THREE.BoxGeometry(3,3,0.2),
+   new THREE.MeshStandardMaterial({map:tex})
+  );
+  tile.position.set((i-1.5)*5,1.5,-5);
+  tile.userData=d;
+  scene.add(tile);
+  tiles.push(tile);
+ });
+}
+
+// CLICK TILE
+let raycaster=new THREE.Raycaster();
+let mouse=new THREE.Vector2();
+
+window.addEventListener('click',e=>{
+ mouse.x=(e.clientX/innerWidth)*2-1;
+ mouse.y=-(e.clientY/innerHeight)*2+1;
+
+ raycaster.setFromCamera(mouse,camera);
+ let hit=raycaster.intersectObjects(tiles);
+
+ if(hit.length>0){
+  let d=hit[0].object.userData;
+  currentTile=d;
+
+  document.getElementById("panel").style.right="0px";
+  document.getElementById("name").innerText=d.name;
+  document.getElementById("img").src=d.img;
+  document.getElementById("price").innerText="Price: "+d.price;
+  document.getElementById("size").innerText="Size: "+d.size;
+  document.getElementById("finish").innerText="Finish: "+d.finish;
+ }
+});
+
+// FOCUS TILE
+function focusTile(i){
+ let t=tiles[i];
+ if(t){
+  camera.position.set(t.position.x,2,t.position.z+5);
+ }
+}
+
+// WHATSAPP ORDER
+function orderNow(){
+ if(!currentTile){
+   alert("Please select a tile first");
+   return;
+ }
+
+ let msg = `Hello, I want to order:\n
+Tile: ${currentTile.name}
+Price: ${currentTile.price}
+Size: ${currentTile.size}`;
+
+ let phone = "919548108030"; // 🔥 PUT YOUR NUMBER HERE
+
+ let url = `https://wa.me/${phone}?text=` + encodeURIComponent(msg);
+ window.open(url, "_blank");
+}
+
+// MOVEMENT
+let keys={};
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+function move(){
+ let speed=0.1;
+ if(keys['w']) camera.position.z-=speed;
+ if(keys['s']) camera.position.z+=speed;
+ if(keys['a']) camera.position.x-=speed;
+ if(keys['d']) camera.position.x+=speed;
+}
+
+// START
+camera.position.set(0,15,25);
+let intro=true;
+
+// ENTER
+document.getElementById("overlay").onclick=()=>{
+ document.body.requestPointerLock();
+ document.getElementById("overlay").style.display="none";
+};
+
+// ANIMATION
+function animate(){
+ requestAnimationFrame(animate);
+
+ if(intro){
+  camera.position.lerp(new THREE.Vector3(0,3,10),0.02);
+  if(camera.position.z<11) intro=false;
+ } else {
+  move();
+ }
+
+ renderer.render(scene,camera);
+}
+animate();
+
+</script>
+
+</body>
+</html>
